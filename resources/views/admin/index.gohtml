@@ -1,0 +1,122 @@
+{{ define "admin/index" }}
+    <!DOCTYPE html>
+    <html lang="en">
+        <head>
+            {{template "header" "管理后台"}}
+        </head>
+        <body>
+            <section class="section" id="app">
+                <div class="container">
+                    <h3>使用说明</h3>
+                    <pre>
+    说明:
+    1. 客户端IP 是要抓包的机器(如手机/pc等)的IP地址，从各机器上查看
+    2. 代理IP 是抓包软件的IP，如charles或fiddler提供的代理地址
+    操作步骤:
+    1. 启动charles等抓包软件，记住代理IP，格式如 10.238.23.2:8888
+    2. 查看要抓包的客户端的IP，如手机或PC的本机IP，格式如：10.238.23.5
+    3. 在管理后台添加客户端IP和代理IP
+    4. 在要抓包的机器的设置DNS(10.238.17.13)或修改HOST(10.238.17.13 note.youdao.com)
+    5. 运行要抓包的app即可
+    注意:
+    1. 抓包软件和要抓包的app不应在同一个机器上，如要测试pc上的electron客户端时应在另一台机器上运行抓包软件
+    2. 目前仅支持 note.youdao.com , *.lx.netease.com  *.cowork.netease.com 这几个域名
+                    </pre>
+                </div>
+                <div class="container">
+                    <h3>列表</h3>
+                    <div>
+                        <table class="table is-hoverable">
+                            <thead>
+                                <tr>
+                                    <th>客户端IP</th>
+                                    <th>代理IP</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {{range $k,$v := .items}}
+                                    <tr>
+                                        <td>{{$k}}</td>
+                                        <td>{{$v}}</td>
+                                        <td>
+                                            <button class="button is-danger" @click="del('{{$k}}')">删除</button>
+                                        </td>
+                                    </tr>
+                                {{end}}
+                                <tr>
+                                    <td><input class="input" v-model="from" placeholder="客户端IP"/></td>
+                                    <td><input class="input" v-model="to" placeholder="代理IP"/></td>
+                                    <td>
+                                        <button class="button is-link" @click="submit()">添加</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {{template "footer" .footer}}
+            </section>
+
+            <script>
+                var app = new Vue({
+                    el: '#app',
+                    data: {
+                        from: "",
+                        to: "",
+                    },
+                    methods: {
+                        submit: function () {
+                            var that = this;
+                            var formData = new FormData()
+                            if (!this.from || !this.to) {
+                                alert("不能为空");
+                                return;
+                            }
+                            formData.append("from", this.from)
+                            formData.append("to", this.to);
+                            fetch("/admin/add-ip", {
+                                method: "POST",
+                                credentials: "same-origin",
+                                body: formData
+                            }).then(function (resp) {
+                                return resp.json()
+                            }).then(function (data) {
+                                if (data.code == 0) {
+                                    that.name = "";
+                                    that.url = "";
+                                    that.code = "";
+                                    alert("提交成功");
+                                    window.location.reload(true)
+                                } else {
+                                    that.code = "";
+                                    alert("提交失败:" + data.msg)
+                                }
+                            });
+                        },
+                        del: function (id) {
+                            var result = confirm("是否删除" + id);
+                            if (result) {
+                                var formData = new FormData()
+                                formData.append("from", id)
+                                fetch("/admin/delete-ip", {
+                                    method: "POST",
+                                    credentials: "same-origin",
+                                    body: formData
+                                }).then(function (resp) {
+                                    return resp.json()
+                                }).then(function (data) {
+                                    if (data.code == 0) {
+                                        window.location.reload(true)
+                                    } else {
+                                        alert("提交失败:" + data.msg)
+                                    }
+                                });
+                            }
+                        }
+                    }
+                })
+            </script>
+        </body>
+    </html>
+{{end}}
